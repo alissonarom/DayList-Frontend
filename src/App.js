@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEff, useEffect } from 'react';
 
 import api from './Services/api';
 
@@ -8,16 +8,50 @@ import './sidebar.css';
 import './main.css';
 
 import Notes from './Components/Notes';
+import RadioButton from './Components/RadioButton';
 
 
 function App() {
+
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
+  const [allNotes, setAllNotes] = useState([]);
 
-  function handleSubmit(e) {
+  useEffect(() => {
+    async function getAllNotes() {
+      const response = await api.get('/annotations');
+
+      setAllNotes(response.data)
+    }
+    getAllNotes()
+  }, [])
+
+  async function handleSubmit(e) {
     e.preventDefault();
 
+    const response = await api.post('/annotations', {
+      title,
+      notes,
+      priority: false
+    })
+
+    setTitle('');
+    setNotes('');
+
+    setAllNotes([...allNotes, response.data])
   }
+
+  useEffect(() => {
+    function enableSubmitButton() {
+      let btn = document.getElementById('btn_submit')
+      btn.style.background = '#ffd3ca'
+      if (title && notes) {
+        btn.style.background = '#eb8f7a'
+        btn.style.transition = '0.8s'
+      }
+    }
+    enableSubmitButton()
+  }, [title, notes])
 
   return (
     <div id="app">
@@ -30,6 +64,7 @@ function App() {
             <input
               required
               value={title}
+              onChange={e => setTitle(e.target.value)}
             />
           </div>
 
@@ -38,15 +73,19 @@ function App() {
             <textarea
               required
               value={notes}
+              onChange={e => setNotes(e.target.value)}
             />
           </div>
 
-          <button type="submit">Salvar</button>
+          <button id="btn_submit" type="submit">Salvar</button>
         </form>
+        <RadioButton />
       </aside>
       <main>
         <ul>
-          <Notes />
+          {allNotes.map(data => (
+            <Notes data={data} />
+          ))}
         </ul>
       </main>
     </div>
